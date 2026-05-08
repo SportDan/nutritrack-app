@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NutriTrack Pro - Калькулятор КБЖУ</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#6c5ce7">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="NutriTrack">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="NutriTrack Pro">
+    <meta name="description" content="Калькулятор калорий, белков, жиров и углеводов с конструктором рецептов">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS Icons -->
+    <link rel="apple-touch-icon" href="icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-72.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    
+    <!-- Защита от кэширования для обновлений -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <style>
+        :root {
+            --bg: #f0f4f8;
+            --card: #ffffff;
+            --primary: #6c5ce7;
+            --primary-light: #a29bfe;
+            --accent: #00b894;
+            --danger: #e17055;
+            --warning: #fdcb6e;
+            --text: #2d3436;
+            --text-light: #636e72;
+            --border: #e0e5ec;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+            --radius: 20px;
+            --radius-sm: 12px;
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 10px;
+            line-height: 1.5;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 520px;
+            background: var(--bg);
+            border-radius: var(--radius);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            position: relative;
+        }
+        .header {
+            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            color: #fff;
+            padding: 18px 20px;
+            border-radius: 0 0 var(--radius) var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header .logo {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header .logo span { font-size: 1.7rem; }
+        .streak-badge {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            padding: 8px 14px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+            50% { box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
+        }
+        .offline-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #e17055;
+            color: white;
+            text-align: center;
+            padding: 4px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            display: none;
+        }
+        .offline-indicator.show { display: block; }
+        .main-content {
+            flex: 1;
+            padding: 16px;
+            padding-bottom: 90px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+        .card:active { transform: scale(0.98); }
+        .card-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text);
+        }
+        .progress-group { display: flex; flex-direction: column; gap: 8px; }
+        .progress-item { display: flex; align-items: center; gap: 10px; }
+        .progress-label {
+            width: 55px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .progress-bar-wrap {
+            flex: 1;
+            height: 10px;
+            background: #eef1f5;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.6s ease;
+        }
+        .progress-bar-fill.cal { background: linear-gradient(90deg, #ff7675, #e17055); }
+        .progress-bar-fill.prot { background: linear-gradient(90deg, #6c5ce7, #a29bfe); }
+        .progress-bar-fill.fat { background: linear-gradient(90deg, #fdcb6e, #e17055); }
+        .progress-bar-fill.carb { background: linear-gradient(90deg, #00b894, #55efc4); }
+        .progress-val {
+            width: 55px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-align: right;
+            color: var(--text);
+        }
+        .btn {
+            border: none;
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            letter-spacing: 0.3px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: #5a4bd1; }
+        .btn-accent { background: var(--accent); color: #fff; }
+        .btn-accent:hover { background: #00a381; }
+        .btn-outline {
+            background: #fff;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        .btn-sm { padding: 7px 14px; font-size: 0.78rem; border-radius: 20px; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            transition: var(--transition);
+            background: #fafbfc;
+            font-family: var(--font);
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.1);
+            background: #fff;
+        }
+        label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 4px;
+            display: block;
+            letter-spacing: 0.3px;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .product-card {
+            background: #fff;
+            border-radius: var(--radius-sm);
+            padding: 10px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+            position: relative;
+        }
+        .product-card:active { transform: scale(0.95); }
+        .product-card .no-img {
+            width: 100%;
+            height: 90px;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            background: #f5f6fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: #ccc;
+        }
+        .product-card .name { font-weight: 700; font-size: 0.85rem; margin-bottom: 2px; }
+        .product-card .macros { font-size: 0.7rem; color: var(--text-light); }
+        .product-card .delete-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(225, 112, 85, 0.9);
+            color: #fff;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.7rem;
+            opacity: 0;
+            transition: var(--transition);
+        }
+        .product-card:active .delete-btn { opacity: 1; }
+        .badges-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .badge-item {
+            text-align: center;
+            padding: 14px 8px;
+            border-radius: var(--radius-sm);
+            background: #fafbfc;
+            border: 2px solid var(--border);
+            transition: var(--transition);
+        }
+        .badge-item.earned {
+            border-color: #fdcb6e;
+            background: #fffef5;
+            animation: glowBadge 2s infinite;
+        }
+        @keyframes glowBadge {
+            0%, 100% { box-shadow: 0 0 8px rgba(253, 203, 110, 0.4); }
+            50% { box-shadow: 0 0 20px rgba(253, 203, 110, 0.8); }
+        }
+        .badge-item .badge-icon { font-size: 2.5rem; margin-bottom: 4px; }
+        .badge-item .badge-name { font-weight: 700; font-size: 0.75rem; color: var(--text); }
+        .badge-item.locked { opacity: 0.45; filter: grayscale(0.6); }
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 520px;
+            background: #fff;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 6px 14px;
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+            z-index: 200;
+            border-radius: var(--radius) var(--radius) 0 0;
+            padding-bottom: calc(14px + env(safe-area-inset-bottom));
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #b2bec3;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            border-radius: 16px;
+            min-width: 55px;
+        }
+        .tab-btn .tab-icon { font-size: 1.4rem; transition: var(--transition); }
+        .tab-btn.active { color: var(--primary); }
+        .tab-btn.active .tab-icon { transform: scale(1.2); }
+        .tab-content { display: none; animation: fadeSlideIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 300;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal {
+            background: #fff;
+            border-radius: var(--radius) var(--radius) 0 0;
+            width: 100%;
+            max-width: 520px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 20px;
+            animation: slideUp 0.3s ease;
+            box-shadow: var(--shadow-lg);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            position: sticky;
+            top: 0;
+            background: #fff;
+            z-index: 5;
+            padding-bottom: 8px;
+        }
+        .modal-header h3 { font-size: 1.2rem; }
+        .modal-close {
+            background: #f1f3f5;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+        .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .form-row>* { flex: 1; min-width: 80px; }
+        .form-group { margin-bottom: 12px; }
+        .recipe-ingredient-row {
+            display: flex;
+            gap: 8px;
+            align-items: end;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .recipe-ingredient-row select,
+        .recipe-ingredient-row input { flex: 1; min-width: 60px; }
+        .recipe-summary {
+            background: #f8f7ff;
+            padding: 14px;
+            border-radius: var(--radius-sm);
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .recipe-summary span {
+            background: #fff;
+            padding: 6px 12px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .points-pop {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: #fdcb6e;
+            color: #2d3436;
+            font-weight: 900;
+            font-size: 1.5rem;
+            padding: 14px 28px;
+            border-radius: 40px;
+            z-index: 400;
+            pointer-events: none;
+            animation: popIn 1.5s ease forwards;
+        }
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+            30% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            70% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -60%) scale(0.8); opacity: 0; }
+        }
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #b2bec3;
+        }
+        .empty-state .icon { font-size: 4rem; display: block; margin-bottom: 10px; }
+        .install-prompt {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            z-index: 500;
+            text-align: center;
+            max-width: 300px;
+            display: none;
+        }
+        .install-prompt.show { display: block; }
+        @media (max-width: 400px) {
+            .product-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+            .badges-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+            .tab-btn { font-size: 0.65rem; padding: 4px 6px; min-width: 40px; }
+            .tab-btn .tab-icon { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Индикатор офлайн-режима -->
+    <div class="offline-indicator" id="offlineIndicator">📡 Вы офлайн. Данные сохраняются локально.</div>
+    
+    <!-- Предложение установки -->
+    <div class="install-prompt" id="installPrompt">
+        <p>📱 Установите приложение для удобного доступа!</p>
+        <button class="btn btn-primary" onclick="installApp()" style="margin-top:10px;">Установить</button>
+        <button class="btn btn-sm" onclick="document.getElementById('installPrompt').classList.remove('show')" style="margin-top:5px;">Закрыть</button>
+    </div>
+
+    <div class="app-container" id="app">
+        <div class="header">
+            <div class="logo"><span>🥗</span> NutriTrack</div>
+            <div class="streak-badge">🔥 <span id="streakDays">0</span> дн.</div>
+        </div>
+
+        <div class="main-content" id="mainContent">
+            <!-- Вкладка Дневник -->
+            <div class="tab-content active" id="tab-diary">
+                <div class="card">
+                    <div class="card-title">📊 Сегодняшний прогресс</div>
+                    <div class="progress-group">
+                        <div class="progress-item">
+                            <span class="progress-label">Ккал</span>
+                            <div class="progress-bar-wrap"><div class="progress-bar-fill cal" id="barCal" style="width:0%"></div></div>
+                            <span class="progress-val" id="valCal">0 / 2000</span>
+                        </div>
+                        <div class="progress-item">
+                            <span class="progress-label">Белки</span>
+                            <div class="progress-bar-wrap"><div class="progress-bar-fill prot" id="barProt" style="width:0%"></div></div>
+                            <span class="progress-val" id="valProt">0 / 120 г</span>
+                        </div>
+                        <div class="progress-item">
+                            <span class="progress-label">Жиры</span>
+                            <div class="progress-bar-wrap"><div class="progress-bar-fill fat" id="barFat" style="width:0%"></div></div>
+                            <span class="progress-val" id="valFat">0 / 65 г</span>
+                        </div>
+                        <div class="progress-item">
+                            <span class="progress-label">Углеводы</span>
+                            <div class="progress-bar-wrap"><div class="progress-bar-fill carb" id="barCarb" style="width:0%"></div></div>
+                            <span class="progress-val" id="valCarb">0 / 250 г</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">🍽️ Приёмы пищи сегодня</div>
+                    <div id="mealsList">
+                        <div class="empty-state"><span class="icon">📝</span>Пока нет записей. Добавьте приём пищи!</div>
+                    </div>
+                    <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddMealModal()">+ Добавить приём пищи</button>
+                </div>
+            </div>
+
+            <!-- Вкладка Продукты -->
+            <div class="tab-content" id="tab-products">
+                <div class="card">
+                    <div class="card-title">📦 Мои продукты</div>
+                    <input type="text" id="productSearch" placeholder="🔍 Поиск продуктов..." oninput="renderProducts()" style="margin-bottom:10px;">
+                    <div class="product-grid" id="productGrid"></div>
+                    <button class="btn btn-accent" style="width:100%;margin-top:10px;" onclick="openAddProductModal()">+ Добавить продукт</button>
+                </div>
+            </div>
+
+            <!-- Вкладка Рецепты -->
+            <div class="tab-content" id="tab-recipes">
+                <div class="card">
+                    <div class="card-title">🍳 Мои рецепты</div>
+                    <div id="recipesList">
+                        <div class="empty-state"><span class="icon">📖</span>Создайте свой первый рецепт!</div>
+                    </div>
+                    <button class="btn btn-accent" style="width:100%;margin-top:10px;" onclick="openAddRecipeModal()">+ Создать рецепт</button>
+                </div>
+            </div>
+
+            <!-- Вкладка Достижения -->
+            <div class="tab-content" id="tab-achievements">
+                <div class="card">
+                    <div class="card-title">🏆 Достижения</div>
+                    <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:8px;">
+                        Уровень: <strong id="userLevel">1</strong> | Очки: <strong id="userPoints">0</strong> ⭐
+                    </p>
+                    <div class="badges-grid" id="badgesGrid"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">🎯 Ежедневные задания</div>
+                    <div id="dailyChallenges">
+                        <p style="font-size:0.85rem;">✅ Запишите 3 приёма пищи — <span id="chalMeals">0/3</span></p>
+                        <p style="font-size:0.85rem;">✅ Создайте рецепт — <span id="chalRecipe">не выполнено</span></p>
+                        <p style="font-size:0.85rem;">✅ Достигните цели по калориям — <span id="chalCalGoal">не выполнено</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вкладка Профиль -->
+            <div class="tab-content" id="tab-profile">
+                <div class="card">
+                    <div class="card-title">👤 Профиль и цели</div>
+                    <div class="form-group"><label>Имя</label><input type="text" id="profileName" placeholder="Ваше имя"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Возраст</label><input type="number" id="profileAge" placeholder="25" min="10" max="120"></div>
+                        <div class="form-group"><label>Пол</label><select id="profileGender"><option value="male">Мужской</option><option value="female">Женский</option></select></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Вес (кг)</label><input type="number" id="profileWeight" placeholder="70" step="0.1" min="30" max="300"></div>
+                        <div class="form-group"><label>Рост (см)</label><input type="number" id="profileHeight" placeholder="170" min="100" max="250"></div>
+                    </div>
+                    <div class="form-group"><label>Уровень активности</label>
+                        <select id="profileActivity">
+                            <option value="1.2">Сидячий образ жизни</option>
+                            <option value="1.375">Лёгкая активность (1-3 р/нед)</option>
+                            <option value="1.55" selected>Умеренная активность (3-5 р/нед)</option>
+                            <option value="1.725">Высокая активность (6-7 р/нед)</option>
+                            <option value="1.9">Очень высокая активность</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Цель</label>
+                        <select id="profileGoal">
+                            <option value="lose">Снижение веса (-20%)</option>
+                            <option value="maintain" selected>Поддержание веса</option>
+                            <option value="gain">Набор веса (+15%)</option>
+                        </select>
+                    </div>
+                    <div class="card" style="background:#f8f7ff;margin-top:8px;" id="calcResult">
+                        <strong>📐 Расчётные нормы:</strong>
+                        <p style="margin:4px 0;font-size:0.9rem;">BMR: <span id="bmrVal">-</span> ккал</p>
+                        <p style="margin:4px 0;font-size:0.9rem;">TDEE: <span id="tdeeVal">-</span> ккал</p>
+                        <p style="margin:4px 0;font-size:0.9rem;">Целевые: <strong id="targetCal">-</strong> ккал | Б: <strong id="targetProt">-</strong> г | Ж: <strong id="targetFat">-</strong> г | У: <strong id="targetCarb">-</strong> г</p>
+                    </div>
+                    <button class="btn btn-primary" style="width:100%;" onclick="saveProfile()">💾 Сохранить профиль</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Таб-бар -->
+        <div class="tab-bar">
+            <button class="tab-btn active" data-tab="diary"><span class="tab-icon">📊</span>Дневник</button>
+            <button class="tab-btn" data-tab="products"><span class="tab-icon">📦</span>Продукты</button>
+            <button class="tab-btn" data-tab="recipes"><span class="tab-icon">🍳</span>Рецепты</button>
+            <button class="tab-btn" data-tab="achievements"><span class="tab-icon">🏆</span>Успехи</button>
+            <button class="tab-btn" data-tab="profile"><span class="tab-icon">👤</span>Профиль</button>
+        </div>
+    </div>
+
+    <div id="modalContainer"></div>
+
+    <!-- Регистрация Service Worker -->
+    <script>
+        // Регистрация Service Worker для офлайн-режима
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js')
+                    .then(function(registration) {
+                        console.log('✅ Service Worker зарегистрирован');
+                        
+                        // Проверка обновлений каждый час
+                        setInterval(() => {
+                            registration.update();
+                        }, 60 * 60 * 1000);
+                    })
+                    .catch(function(err) {
+                        console.log('❌ Ошибка Service Worker: ', err);
+                    });
+            });
+        }
+
+        // Переменная для установки PWA
+        let deferredPrompt;
+        
+        // Отслеживание офлайн-статуса
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        
+        function updateOnlineStatus() {
+            const indicator = document.getElementById('offlineIndicator');
+            if (navigator.onLine) {
+                indicator.classList.remove('show');
+                // Синхронизация данных при возврате в онлайн
+                syncData();
+            } else {
+                indicator.classList.add('show');
+            }
+        }
+        
+        function syncData() {
+            console.log('🔄 Синхронизация данных...');
+            // Здесь можно добавить синхронизацию с сервером, если нужно
+        }
+        
+        // Предложение установки
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Показать предложение установки
+            setTimeout(() => {
+                document.getElementById('installPrompt').classList.add('show');
+            }, 3000);
+        });
+        
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('✅ Пользователь установил приложение');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+            document.getElementById('installPrompt').classList.remove('show');
+        }
+        
+        // Отслеживание установки
+        window.addEventListener('appinstalled', () => {
+            console.log('📱 Приложение установлено!');
+            deferredPrompt = null;
+        });
+    </script>
+
+    <!-- Основной JavaScript приложения -->
+    <script>
+        (function() {
+            const STORAGE_KEY = 'nutritrack_pwa_v1';
+            
+            // База продуктов по умолчанию
+            const DEFAULT_PRODUCTS = [
+                { id:'p_default_1', name:'Куриная грудка (варёная)', photoDataUrl:null, kcal:113, protein:23.6, fat:1.9, carbs:0.4 },
+                { id:'p_default_2', name:'Рис белый (варёный)', photoDataUrl:null, kcal:116, protein:2.4, fat:0.4, carbs:25.2 },
+                { id:'p_default_3', name:'Яйцо куриное (варёное)', photoDataUrl:null, kcal:155, protein:12.6, fat:10.6, carbs:0.6 },
+                { id:'p_default_4', name:'Молоко 2.5%', photoDataUrl:null, kcal:52, protein:2.8, fat:2.5, carbs:4.7 },
+                { id:'p_default_5', name:'Творог 5%', photoDataUrl:null, kcal:121, protein:17.2, fat:5.0, carbs:1.8 },
+                { id:'p_default_6', name:'Банан', photoDataUrl:null, kcal:96, protein:1.5, fat:0.5, carbs:21.0 },
+                { id:'p_default_7', name:'Овсянка (сухая)', photoDataUrl:null, kcal:352, protein:12.3, fat:6.5, carbs:61.8 },
+                { id:'p_default_8', name:'Гречка (варёная)', photoDataUrl:null, kcal:110, protein:4.2, fat:1.1, carbs:21.3 },
+                { id:'p_default_9', name:'Лосось (слабосолёный)', photoDataUrl:null, kcal:202, protein:20.5, fat:13.1, carbs:0.0 },
+                { id:'p_default_10', name:'Помидор', photoDataUrl:null, kcal:18, protein:0.9, fat:0.2, carbs:3.9 },
+                { id:'p_default_11', name:'Огурец', photoDataUrl:null, kcal:15, protein:0.7, fat:0.1, carbs:3.0 },
+                { id:'p_default_12', name:'Хлеб цельнозерновой', photoDataUrl:null, kcal:247, protein:8.8, fat:3.4, carbs:41.3 }
+            ];
+
+            let appData = {
+                profile: { name:'', age:25, gender:'male', weight:70, height:170, activity:1.55, goal:'maintain' },
+                products: [],
+                meals: {},
+                recipes: [],
+                achievements: { points:0, level:1, streak:0, lastActiveDate:'', badgesEarned:[], mealsLoggedToday:0, recipeCreatedToday:false, calGoalReachedToday:false },
+                dailyLog: {}
+            };
+
+            function getToday() {
+                return new Date().toISOString().split('T')[0];
+            }
+
+            function deepMerge(target, source) {
+                const result = { ...target };
+                for (const key in source) {
+                    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key]) && target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+                        result[key] = deepMerge(target[key], source[key]);
+                    } else {
+                        result[key] = source[key];
+                    }
+                }
+                return result;
+            }
+
+            function loadData() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        appData = deepMerge(appData, parsed);
+                    }
+                } catch(e) {
+                    console.error('Ошибка загрузки данных:', e);
+                }
+                
+                if (!appData.products || appData.products.length === 0) {
+                    appData.products = JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
+                    console.log('🌱 База продуктов загружена (12 шт.)');
+                }
+                
+                const today = getToday();
+                if (!appData.dailyLog[today]) {
+                    appData.dailyLog[today] = { mealsCount:0, recipeCreated:false, calGoalReached:false };
+                }
+                appData.achievements.mealsLoggedToday = appData.dailyLog[today]?.mealsCount || 0;
+                appData.achievements.recipeCreatedToday = appData.dailyLog[today]?.recipeCreated || false;
+                appData.achievements.calGoalReachedToday = appData.dailyLog[today]?.calGoalReached || false;
+                updateStreak();
+            }
+
+            function saveData() {
+                try {
+                    const dataToSave = JSON.parse(JSON.stringify(appData));
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+                } catch(e) {
+                    console.error('Ошибка сохранения:', e);
+                    alert('Ошибка сохранения данных. Возможно, память устройства заполнена.');
+                }
+            }
+
+            function updateStreak() {
+                const today = getToday();
+                const last = appData.achievements.lastActiveDate;
+                if (last === today) return;
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = yesterday.toISOString().split('T')[0];
+                if (last === yesterdayStr) {
+                    appData.achievements.streak += 1;
+                } else if (last !== today) {
+                    appData.achievements.streak = 1;
+                }
+                appData.achievements.lastActiveDate = today;
+                checkBadgeEarn('streak3', appData.achievements.streak >= 3);
+                checkBadgeEarn('streak7', appData.achievements.streak >= 7);
+                checkBadgeEarn('streak30', appData.achievements.streak >= 30);
+                saveData();
+            }
+
+            function calculateBMR() {
+                const p = appData.profile;
+                if (!p.weight || !p.height || !p.age) return 0;
+                if (p.gender === 'male') {
+                    return 10 * p.weight + 6.25 * p.height - 5 * p.age + 5;
+                } else {
+                    return 10 * p.weight + 6.25 * p.height - 5 * p.age - 161;
+                }
+            }
+
+            function calculateTDEE() {
+                return Math.round(calculateBMR() * appData.profile.activity);
+            }
+
+            function getTargetCalories() {
+                const tdee = calculateTDEE();
+                const goal = appData.profile.goal;
+                if (goal === 'lose') return Math.round(tdee * 0.8);
+                if (goal === 'gain') return Math.round(tdee * 1.15);
+                return Math.round(tdee);
+            }
+
+            function getTargetMacros() {
+                const cal = getTargetCalories();
+                const protein = Math.round(cal * 0.25 / 4);
+                const fat = Math.round(cal * 0.28 / 9);
+                const carbs = Math.round(cal * 0.47 / 4);
+                return { cal, protein, fat, carbs };
+            }
+
+            // Система достижений
+            const ALL_BADGES = [
+                { id:'firstMeal', name:'Первый приём', icon:'🍽️', desc:'Запишите первый приём пищи' },
+                { id:'tenMeals', name:'10 приёмов', icon:'🔟', desc:'Запишите 10 приёмов пищи' },
+                { id:'fiftyMeals', name:'50 приёмов', icon:'🏅', desc:'Запишите 50 приёмов пищи' },
+                { id:'firstRecipe', name:'Шеф-повар', icon:'👨‍🍳', desc:'Создайте первый рецепт' },
+                { id:'fiveRecipes', name:'Кулинар', icon:'📖', desc:'Создайте 5 рецептов' },
+                { id:'streak3', name:'3 дня подряд', icon:'🔥', desc:'Активность 3 дня подряд' },
+                { id:'streak7', name:'Неделя силы', icon:'💪', desc:'Активность 7 дней подряд' },
+                { id:'streak30', name:'Месячный марафон', icon:'🏆', desc:'Активность 30 дней подряд' },
+                { id:'calGoal', name:'Точно в цель', icon:'🎯', desc:'Достигните цели по калориям за день' },
+                { id:'level5', name:'5 уровень', icon:'⭐', desc:'Достигните 5 уровня' },
+                { id:'level10', name:'10 уровень', icon:'🌟', desc:'Достигните 10 уровня' },
+                { id:'fiveProducts', name:'Коллекционер', icon:'📦', desc:'Добавьте 5 продуктов в базу' }
+            ];
+
+            function checkBadgeEarn(badgeId, condition) {
+                if (!condition) return;
+                if (appData.achievements.badgesEarned.includes(badgeId)) return;
+                appData.achievements.badgesEarned.push(badgeId);
+                addPoints(50);
+                showPointsPop('🏆 +50 очков!');
+                saveData();
+                renderAll();
+            }
+
+            function addPoints(pts) {
+                appData.achievements.points += pts;
+                const newLevel = Math.floor(appData.achievements.points / 200) + 1;
+                if (newLevel > appData.achievements.level) {
+                    appData.achievements.level = newLevel;
+                    showPointsPop('🎉 Уровень ' + newLevel + '!');
+                    checkBadgeEarn('level5', newLevel >= 5);
+                    checkBadgeEarn('level10', newLevel >= 10);
+                }
+                saveData();
+                updateUI();
+            }
+
+            function showPointsPop(text) {
+                const pop = document.createElement('div');
+                pop.className = 'points-pop';
+                pop.textContent = text;
+                document.body.appendChild(pop);
+                setTimeout(() => pop.remove(), 1600);
+            }
+
+            function updateUI() {
+                document.getElementById('userLevel').textContent = appData.achievements.level;
+                document.getElementById('userPoints').textContent = appData.achievements.points;
+                document.getElementById('streakDays').textContent = appData.achievements.streak;
+                updateDailyChallengeUI();
+            }
+
+            function updateDailyChallengeUI() {
+                const today = getToday();
+                const dl = appData.dailyLog[today] || { mealsCount:0, recipeCreated:false, calGoalReached:false };
+                document.getElementById('chalMeals').textContent = Math.min(dl.mealsCount, 3) + '/3';
+                document.getElementById('chalRecipe').textContent = dl.recipeCreated ? '✅ Выполнено!' : 'не выполнено';
+                document.getElementById('chalCalGoal').textContent = dl.calGoalReached ? '✅ Выполнено!' : 'не выполнено';
+            }
+
+            function renderBadges() {
+                const grid = document.getElementById('badgesGrid');
+                if (!grid) return;
+                grid.innerHTML = ALL_BADGES.map(b => {
+                    const earned = appData.achievements.badgesEarned.includes(b.id);
+                    return `<div class="badge-item ${earned ? 'earned' : 'locked'}" title="${b.desc}">
+                        <div class="badge-icon">${b.icon}</div>
+                        <div class="badge-name">${b.name}</div>
+                        <div style="font-size:0.65rem;color:var(--text-light);">${earned ? '✅ Получено' : b.desc}</div>
+                    </div>`;
+                }).join('');
+            }
+
+            function escapeHtml(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            function renderProducts(filter = '') {
+                const grid = document.getElementById('productGrid');
+                if (!grid) return;
+                let products = appData.products;
+                if (filter) {
+                    const q = filter.toLowerCase();
+                    products = products.filter(p => p.name.toLowerCase().includes(q));
+                }
+                if (products.length === 0) {
+                    grid.innerHTML = '<div class="empty-state"><span class="icon">🍎</span>Нет продуктов. Добавьте первый!</div>';
+                } else {
+                    grid.innerHTML = products.map(p => `
+                        <div class="product-card" onclick="selectProductForMeal('${p.id}')">
+                            <button class="delete-btn" onclick="event.stopPropagation(); deleteProduct('${p.id}')">✕</button>
+                            <div class="no-img">🥘</div>
+                            <div class="name">${escapeHtml(p.name)}</div>
+                            <div class="macros">${p.kcal} ккал | Б:${p.protein} Ж:${p.fat} У:${p.carbs} (на 100г)</div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            function renderMeals() {
+                const today = getToday();
+                const meals = appData.meals[today] || [];
+                const container = document.getElementById('mealsList');
+                if (!container) return;
+                if (meals.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><span class="icon">📝</span>Пока нет записей. Добавьте приём пищи!</div>';
+                } else {
+                    container.innerHTML = meals.map((m, i) => `
+                        <div class="card" style="padding:12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+                            <div>
+                                <strong>${escapeHtml(m.productName)}</strong> — ${m.weight}г
+                                <div style="font-size:0.75rem;color:var(--text-light);">${m.kcal} ккал | Б:${m.protein}г Ж:${m.fat}г У:${m.carbs}г</div>
+                                <div style="font-size:0.7rem;color:#b2bec3;">${m.time || ''}</div>
+                            </div>
+                            <button class="btn btn-danger btn-sm" onclick="deleteMeal('${today}',${i})">Удалить</button>
+                        </div>
+                    `).join('');
+                }
+                updateProgressBars();
+            }
+
+            function updateProgressBars() {
+                const today = getToday();
+                const meals = appData.meals[today] || [];
+                const totals = meals.reduce((acc, m) => {
+                    acc.kcal += m.kcal || 0;
+                    acc.protein += m.protein || 0;
+                    acc.fat += m.fat || 0;
+                    acc.carbs += m.carbs || 0;
+                    return acc;
+                }, { kcal:0, protein:0, fat:0, carbs:0 });
+
+                const targets = getTargetMacros();
+                const pctCal = targets.cal > 0 ? Math.min(100, (totals.kcal / targets.cal) * 100) : 0;
+                const pctProt = targets.protein > 0 ? Math.min(100, (totals.protein / targets.protein) * 100) : 0;
+                const pctFat = targets.fat > 0 ? Math.min(100, (totals.fat / targets.fat) * 100) : 0;
+                const pctCarb = targets.carbs > 0 ? Math.min(100, (totals.carbs / targets.carbs) * 100) : 0;
+
+                document.getElementById('barCal').style.width = pctCal + '%';
+                document.getElementById('barProt').style.width = pctProt + '%';
+                document.getElementById('barFat').style.width = pctFat + '%';
+                document.getElementById('barCarb').style.width = pctCarb + '%';
+                document.getElementById('valCal').textContent = Math.round(totals.kcal) + ' / ' + targets.cal;
+                document.getElementById('valProt').textContent = Math.round(totals.protein) + ' / ' + targets.protein + ' г';
+                document.getElementById('valFat').textContent = Math.round(totals.fat) + ' / ' + targets.fat + ' г';
+                document.getElementById('valCarb').textContent = Math.round(totals.carbs) + ' / ' + targets.carbs + ' г';
+
+                const dl = appData.dailyLog[today] || {};
+                if (totals.kcal >= targets.cal * 0.9 && totals.kcal <= targets.cal * 1.1 && targets.cal > 0) {
+                    if (!dl.calGoalReached) {
+                        dl.calGoalReached = true;
+                        appData.dailyLog[today] = dl;
+                        checkBadgeEarn('calGoal', true);
+                        addPoints(40);
+                        showPointsPop('🎯 Цель по калориям! +40');
+                    }
+                }
+                updateUI();
+            }
+
+            function renderRecipes() {
+                const container = document.getElementById('recipesList');
+                if (!container) return;
+                if (appData.recipes.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><span class="icon">📖</span>Создайте свой первый рецепт!</div>';
+                } else {
+                    container.innerHTML = appData.recipes.map(r => `
+                        <div class="card" style="padding:14px;margin-bottom:8px;">
+                            <strong>🍳 ${escapeHtml(r.name)}</strong>
+                            <div style="font-size:0.8rem;color:var(--text-light);">${r.ingredients.length} ингредиентов | ${r.totalKcal} ккал</div>
+                            <div style="font-size:0.75rem;">Б:${r.totalProtein}г Ж:${r.totalFat}г У:${r.totalCarbs}г</div>
+                            <button class="btn btn-sm btn-outline" style="margin-top:6px;" onclick="useRecipeForMeal('${r.id}')">📝 Записать</button>
+                            <button class="btn btn-sm btn-danger" style="margin-top:6px;" onclick="deleteRecipe('${r.id}')">Удалить</button>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            function updateProfileCalcDisplay() {
+                const bmr = Math.round(calculateBMR());
+                const tdee = calculateTDEE();
+                const targets = getTargetMacros();
+                document.getElementById('bmrVal').textContent = bmr || '-';
+                document.getElementById('tdeeVal').textContent = tdee || '-';
+                document.getElementById('targetCal').textContent = targets.cal || '-';
+                document.getElementById('targetProt').textContent = targets.protein || '-';
+                document.getElementById('targetFat').textContent = targets.fat || '-';
+                document.getElementById('targetCarb').textContent = targets.carbs || '-';
+            }
+
+            function renderAll() {
+                renderProducts(document.getElementById('productSearch')?.value || '');
+                renderMeals();
+                renderRecipes();
+                renderBadges();
+                updateProfileCalcDisplay();
+                updateUI();
+            }
+
+            function loadProfileToForm() {
+                const p = appData.profile;
+                document.getElementById('profileName').value = p.name || '';
+                document.getElementById('profileAge').value = p.age || 25;
+                document.getElementById('profileGender').value = p.gender || 'male';
+                document.getElementById('profileWeight').value = p.weight || 70;
+                document.getElementById('profileHeight').value = p.height || 170;
+                document.getElementById('profileActivity').value = p.activity || 1.55;
+                document.getElementById('profileGoal').value = p.goal || 'maintain';
+                updateProfileCalcDisplay();
+            }
+
+            // CRUD операции
+            window.deleteProduct = function(id) {
+                if (!confirm('Удалить продукт?')) return;
+                appData.products = appData.products.filter(p => p.id !== id);
+                saveData();
+                renderAll();
+            };
+
+            window.deleteMeal = function(dateStr, index) {
+                appData.meals[dateStr] = appData.meals[dateStr] || [];
+                appData.meals[dateStr].splice(index, 1);
+                if (dateStr === getToday() && appData.dailyLog[getToday()]) {
+                    appData.dailyLog[getToday()].mealsCount = Math.max(0, (appData.dailyLog[getToday()].mealsCount || 0) - 1);
+                }
+                saveData();
+                renderAll();
+            };
+
+            window.deleteRecipe = function(id) {
+                if (!confirm('Удалить рецепт?')) return;
+                appData.recipes = appData.recipes.filter(r => r.id !== id);
+                saveData();
+                renderAll();
+            };
+
+            window.selectProductForMeal = function(productId) {
+                const product = appData.products.find(p => p.id === productId);
+                if (!product) return;
+                openAddMealModal(product);
+            };
+
+            window.useRecipeForMeal = function(recipeId) {
+                const recipe = appData.recipes.find(r => r.id === recipeId);
+                if (!recipe) return;
+                const today = getToday();
+                const meal = {
+                    id: 'r_' + Date.now(),
+                    productId: 'recipe_' + recipeId,
+                    productName: '🍳 ' + recipe.name,
+                    weight: recipe.totalWeight || 100,
+                    kcal: recipe.totalKcal,
+                    protein: recipe.totalProtein,
+                    fat: recipe.totalFat,
+                    carbs: recipe.totalCarbs,
+                    time: new Date().toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' })
+                };
+                appData.meals[today] = appData.meals[today] || [];
+                appData.meals[today].push(meal);
+                appData.dailyLog[today] = appData.dailyLog[today] || { mealsCount:0 };
+                appData.dailyLog[today].mealsCount++;
+                checkBadgeEarn('firstMeal', true);
+                addPoints(5);
+                saveData();
+                renderAll();
+                showPointsPop('🍽️ Приём пищи записан! +5');
+            };
+
+            // Модальные окна
+            function closeModal() {
+                document.getElementById('modalContainer').innerHTML = '';
+            }
+
+            window.closeModal = closeModal;
+
+            window.openAddProductModal = function() {
+                document.getElementById('modalContainer').innerHTML = `
+                    <div class="modal-overlay" onclick="closeModal()">
+                        <div class="modal" onclick="event.stopPropagation()">
+                            <div class="modal-header">
+                                <h3>📦 Добавить продукт</h3>
+                                <button class="modal-close" onclick="closeModal()">✕</button>
+                            </div>
+                            <div class="form-group"><label>Название продукта</label><input type="text" id="newProdName" placeholder="Например: Куриная грудка"></div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Ккал (на 100г)</label><input type="number" id="newProdKcal" placeholder="0" step="0.1" min="0"></div>
+                                <div class="form-group"><label>Белки (г)</label><input type="number" id="newProdProt" placeholder="0" step="0.1" min="0"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Жиры (г)</label><input type="number" id="newProdFat" placeholder="0" step="0.1" min="0"></div>
+                                <div class="form-group"><label>Углеводы (г)</label><input type="number" id="newProdCarb" placeholder="0" step="0.1" min="0"></div>
+                            </div>
+                            <button class="btn btn-accent" style="width:100%;" onclick="saveNewProduct()">💾 Сохранить продукт</button>
+                        </div>
+                    </div>`;
+            };
+
+            window.saveNewProduct = function() {
+                const name = document.getElementById('newProdName')?.value.trim();
+                if (!name) { alert('Введите название!'); return; }
+                appData.products.push({
+                    id: 'p_' + Date.now(),
+                    name: name,
+                    photoDataUrl: null,
+                    kcal: parseFloat(document.getElementById('newProdKcal')?.value) || 0,
+                    protein: parseFloat(document.getElementById('newProdProt')?.value) || 0,
+                    fat: parseFloat(document.getElementById('newProdFat')?.value) || 0,
+                    carbs: parseFloat(document.getElementById('newProdCarb')?.value) || 0,
+                });
+                addPoints(15);
+                saveData();
+                closeModal();
+                renderAll();
+                showPointsPop('📦 Продукт добавлен! +15');
+            };
+
+            window.openAddMealModal = function(preselectedProduct = null) {
+                const options = appData.products.map(p =>
+                    `<option value="${p.id}" ${preselectedProduct?.id === p.id ? 'selected' : ''}>${escapeHtml(p.name)} (${p.kcal} ккал/100г)</option>`
+                ).join('');
+                
+                if (!options) { alert('Сначала добавьте продукты!'); return; }
+                
+                document.getElementById('modalContainer').innerHTML = `
+                    <div class="modal-overlay" onclick="closeModal()">
+                        <div class="modal" onclick="event.stopPropagation()">
+                            <div class="modal-header">
+                                <h3>🍽️ Добавить приём пищи</h3>
+                                <button class="modal-close" onclick="closeModal()">✕</button>
+                            </div>
+                            <div class="form-group"><label>Продукт</label><select id="mealProductId">${options}</select></div>
+                            <div class="form-group"><label>Вес (грамм)</label><input type="number" id="mealWeight" value="100" min="1"></div>
+                            <div id="mealPreview" style="background:#f8f7ff;padding:10px;border-radius:10px;margin-bottom:10px;"></div>
+                            <button class="btn btn-primary" style="width:100%;" onclick="saveMeal()">✅ Записать</button>
+                        </div>
+                    </div>`;
+                
+                setTimeout(() => {
+                    const sel = document.getElementById('mealProductId');
+                    const weight = document.getElementById('mealWeight');
+                    const update = () => {
+                        const p = appData.products.find(p => p.id === sel.value);
+                        const w = parseFloat(weight.value) || 0;
+                        if (p) {
+                            document.getElementById('mealPreview').innerHTML = `
+                                ${escapeHtml(p.name)} — ${w}г: 🔥${(p.kcal*w/100).toFixed(1)} ккал | Б:${(p.protein*w/100).toFixed(1)}г
+                            `;
+                        }
+                    };
+                    sel.onchange = update;
+                    weight.oninput = update;
+                    update();
+                }, 100);
+            };
+
+            window.saveMeal = function() {
+                const productId = document.getElementById('mealProductId')?.value;
+                const weight = parseFloat(document.getElementById('mealWeight')?.value) || 100;
+                const product = appData.products.find(p => p.id === productId);
+                if (!product) { alert('Выберите продукт!'); return; }
+                
+                const today = getToday();
+                appData.meals[today] = appData.meals[today] || [];
+                appData.meals[today].push({
+                    id: 'm_' + Date.now(),
+                    productId: product.id,
+                    productName: product.name,
+                    weight: weight,
+                    kcal: Math.round(product.kcal * weight / 100 * 10) / 10,
+                    protein: Math.round(product.protein * weight / 100 * 10) / 10,
+                    fat: Math.round(product.fat * weight / 100 * 10) / 10,
+                    carbs: Math.round(product.carbs * weight / 100 * 10) / 10,
+                    time: new Date().toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' })
+                });
+                
+                appData.dailyLog[today] = appData.dailyLog[today] || {};
+                appData.dailyLog[today].mealsCount = (appData.dailyLog[today].mealsCount || 0) + 1;
+                
+                checkBadgeEarn('firstMeal', true);
+                addPoints(5);
+                updateStreak();
+                saveData();
+                closeModal();
+                renderAll();
+                showPointsPop('🍽️ +5 очков!');
+            };
+
+            window.openAddRecipeModal = function() {
+                if (!appData.products.length) { alert('Добавьте продукты!'); return; }
+                const options = appData.products.map(p => 
+                    `<option value="${p.id}">${escapeHtml(p.name)}</option>`
+                ).join('');
+                
+                document.getElementById('modalContainer').innerHTML = `
+                    <div class="modal-overlay" onclick="closeModal()">
+                        <div class="modal" onclick="event.stopPropagation()">
+                            <div class="modal-header">
+                                <h3>🍳 Создать рецепт</h3>
+                                <button class="modal-close" onclick="closeModal()">✕</button>
+                            </div>
+                            <input type="text" id="recipeName" placeholder="Название рецепта" class="form-group">
+                            <div id="recipeIngredients">
+                                <div class="recipe-ingredient-row">
+                                    <select class="ing-select">${options}</select>
+                                    <input type="number" class="ing-weight" value="100" min="1" style="max-width:80px;">
+                                    <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove();updateRecipePreview()">✕</button>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-outline" onclick="addIngredient()">+ Ингредиент</button>
+                            <div id="recipePreviewArea" style="background:#f8f7ff;padding:10px;border-radius:10px;margin:10px 0;"></div>
+                            <button class="btn btn-accent" style="width:100%;" onclick="saveRecipe()">💾 Сохранить</button>
+                        </div>
+                    </div>`;
+                
+                window.addIngredient = function() {
+                    const div = document.createElement('div');
+                    div.className = 'recipe-ingredient-row';
+                    div.innerHTML = `
+                        <select class="ing-select">${options}</select>
+                        <input type="number" class="ing-weight" value="100" min="1" style="max-width:80px;">
+                        <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove();updateRecipePreview()">✕</button>
+                    `;
+                    document.getElementById('recipeIngredients').appendChild(div);
+                };
+                
+                window.updateRecipePreview = function() {
+                    let kcal = 0, prot = 0, fat = 0, carb = 0, weight = 0;
+                    document.querySelectorAll('.recipe-ingredient-row').forEach(row => {
+                        const p = appData.products.find(p => p.id === row.querySelector('.ing-select').value);
+                        const w = parseFloat(row.querySelector('.ing-weight').value) || 0;
+                        if (p && w) {
+                            kcal += p.kcal * w / 100;
+                            prot += p.protein * w / 100;
+                            fat += p.fat * w / 100;
+                            carb += p.carbs * w / 100;
+                            weight += w;
+                        }
+                    });
+                    document.getElementById('recipePreviewArea').innerHTML = `
+                        Общий вес: ${Math.round(weight)}г | 🔥${Math.round(kcal)} ккал | Б:${Math.round(prot)}г Ж:${Math.round(fat)}г У:${Math.round(carb)}г
+                    `;
+                };
+                
+                window.saveRecipe = function() {
+                    const name = document.getElementById('recipeName').value.trim();
+                    if (!name) { alert('Введите название!'); return; }
+                    
+                    const ingredients = [];
+                    let kcal = 0, prot = 0, fat = 0, carb = 0, weight = 0;
+                    
+                    document.querySelectorAll('.recipe-ingredient-row').forEach(row => {
+                        const p = appData.products.find(p => p.id === row.querySelector('.ing-select').value);
+                        const w = parseFloat(row.querySelector('.ing-weight').value) || 0;
+                        if (p && w) {
+                            ingredients.push({ productId: p.id, weight: w });
+                            kcal += p.kcal * w / 100;
+                            prot += p.protein * w / 100;
+                            fat += p.fat * w / 100;
+                            carb += p.carbs * w / 100;
+                            weight += w;
+                        }
+                    });
+                    
+                    if (!ingredients.length) { alert('Добавьте ингредиенты!'); return; }
+                    
+                    appData.recipes.push({
+                        id: 'rec_' + Date.now(),
+                        name,
+                        ingredients,
+                        totalKcal: Math.round(kcal),
+                        totalProtein: Math.round(prot),
+                        totalFat: Math.round(fat),
+                        totalCarbs: Math.round(carb),
+                        totalWeight: Math.round(weight)
+                    });
+                    
+                    appData.dailyLog[getToday()] = appData.dailyLog[getToday()] || {};
+                    appData.dailyLog[getToday()].recipeCreated = true;
+                    checkBadgeEarn('firstRecipe', true);
+                    addPoints(25);
+                    saveData();
+                    closeModal();
+                    renderAll();
+                    showPointsPop('🍳 Рецепт создан! +25');
+                };
+                
+                document.getElementById('recipeIngredients').onchange = updateRecipePreview;
+                document.getElementById('recipeIngredients').oninput = updateRecipePreview;
+            };
+
+            window.saveProfile = function() {
+                appData.profile.name = document.getElementById('profileName').value;
+                appData.profile.age = parseInt(document.getElementById('profileAge').value) || 25;
+                appData.profile.gender = document.getElementById('profileGender').value;
+                appData.profile.weight = parseFloat(document.getElementById('profileWeight').value) || 70;
+                appData.profile.height = parseFloat(document.getElementById('profileHeight').value) || 170;
+                appData.profile.activity = parseFloat(document.getElementById('profileActivity').value) || 1.55;
+                appData.profile.goal = document.getElementById('profileGoal').value;
+                addPoints(10);
+                updateStreak();
+                saveData();
+                renderAll();
+                showPointsPop('👤 Профиль сохранён! +10');
+            };
+
+            // Навигация
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tab = btn.dataset.tab;
+                    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+                    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+                    document.getElementById('tab-' + tab).classList.add('active');
+                    btn.classList.add('active');
+                    if (tab === 'profile') loadProfileToForm();
+                    if (tab === 'products') renderProducts();
+                    if (tab === 'diary') renderMeals();
+                    if (tab === 'recipes') renderRecipes();
+                    if (tab === 'achievements') renderBadges();
+                });
+            });
+
+            document.getElementById('productSearch')?.addEventListener('input', function() {
+                renderProducts(this.value);
+            });
+
+            // Инициализация
+            loadData();
+            updateStreak();
+            renderAll();
+            loadProfileToForm();
+            updateUI();
+            
+            console.log('🥗 NutriTrack PWA готов!');
+            console.log('📦 Продуктов:', appData.products.length);
+            console.log('🏆 Уровень:', appData.achievements.level, '| Очков:', appData.achievements.points);
+        })();
+    </script>
+</body>
+</html>

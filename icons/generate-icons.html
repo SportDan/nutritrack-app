@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Генератор иконок NutriTrack</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; }
+        canvas { border: 2px solid #ccc; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h2>🎨 Создание иконок для NutriTrack PWA</h2>
+    <canvas id="canvas" width="512" height="512"></canvas>
+    <br>
+    <button onclick="generateAllIcons()">Скачать все иконки ZIP</button>
+    <div id="status"></div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Рисуем иконку
+        function drawIcon(size) {
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Фон
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#6c5ce7');
+            gradient.addColorStop(1, '#a29bfe');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.roundRect(0, 0, size, size, size * 0.2);
+            ctx.fill();
+            
+            // Эмодзи
+            ctx.font = `${size * 0.5}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🥗', size/2, size/2);
+        }
+        
+        function generateAllIcons() {
+            const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+            document.getElementById('status').textContent = 'Скачивание иконок...';
+            
+            sizes.forEach(size => {
+                drawIcon(size);
+                canvas.toBlob(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `icon-${size}.png`;
+                    a.click();
+                });
+            });
+        }
+        
+        // Инициализация
+        drawIcon(512);
+    </script>
+</body>
+</html>
